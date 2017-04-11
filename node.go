@@ -3,6 +3,7 @@ package sodibus
 import "net"
 import "log"
 import "sync"
+import "errors"
 import "math/rand"
 import "github.com/Unknwon/com"
 import "github.com/sodibus/packet"
@@ -90,6 +91,28 @@ func (n *Node) ResolveCallee(name string) *CalleeId {
 	return calleeId
 }
 
+func (n *Node) TransportInvocation(calleeId *CalleeId, p *packet.PacketCalleeRecv) error {
+	conn := n.conns[calleeId.ClientId]
+	if conn == nil { return errors.New("no callee found") }
+	f, err := packet.NewFrameWithPacket(p)
+	if err != nil { return err }
+	err = conn.Send(f)
+	return err
+}
+
+func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
+	conn := n.conns[p.Id.ClientId]
+	if conn == nil { return errors.New("no callee found") }
+	f, err := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
+		Id: p.Id.Id,
+		Code: packet.ErrorCode_OK,
+		Result: p.Result,
+	})
+	if err != nil { return err }
+	err = conn.Send(f)
+	return err
+}
+
 // ConnHandler
 
 func (n *Node) ConnDidStart(c *Conn) {
@@ -100,7 +123,40 @@ func (n *Node) ConnDidStart(c *Conn) {
 	n.connsLock.Unlock()
 }
 
+// will run in goroutine
 func (n *Node) ConnDidReceiveFrame(c *Conn, f *packet.Frame) {
+	m, err := f.Parse()
+	if err != nil { return }
+	switch m.(type) {
+		case (*packet.PacketCallerSend): {
+			p := m.(*packet.PacketCallerSend)
+			log.Println("Invoke from", c.id, ", callee_name =", p.Invocation.CalleeName , ", method =", p.Invocation.MethodName, ", arguments =", p.Invocation.Arguments)
+			calleeId := n.ResolveCallee(p.Invocation.CalleeName)
+			if calleeId == nil {
+				log.Println("Callee named", p.Invocation.CalleeName, "not found")
+				r, _ := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
+					Id: p.Id,
+					Code: packet.ErrorCode_NO_CALLEE,
+					Result: "",
+				})
+				c.Send(r)
+			} else {
+				r := &packet.PacketCalleeRecv{
+					Id: &packet.InvocationId{
+						Id: p.Id,
+						ClientId: c.id,
+						NodeId: n.id,
+					},
+					Invocation: p.Invocation,
+				}
+				n.TransportInvocation(calleeId, r)
+			}
+		}
+		case (*packet.PacketCalleeSend): {
+			p := m.(*packet.PacketCalleeSend)
+			n.TransportInvocationResult(p)
+		}
+	}
 }
 
 func (n *Node) ConnWillClose(c *Conn) {
@@ -111,3 +167,6 @@ func (n *Node) ConnWillClose(c *Conn) {
 	n.connsLock.Unlock()
 }
 
+func (n *Node) GetNodeId() uint64 {
+	return n.id
+}

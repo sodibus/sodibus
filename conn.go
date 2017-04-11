@@ -2,6 +2,7 @@ package sodibus
 
 import "net"
 import "errors"
+import "sync"
 import "github.com/sodibus/packet"
 import "github.com/golang/protobuf/proto"
 
@@ -10,12 +11,11 @@ type Conn struct {
 	conn *net.TCPConn
 	provides []string
 	isCallee bool
-
-	sendChan chan *packet.Frame
-	stopChan chan bool
+	sendLock *sync.Mutex
 }
 
 type ConnHandler interface {
+	GetNodeId() uint64
 	ConnDidStart(c *Conn)
 	ConnDidReceiveFrame(c *Conn, f *packet.Frame)
 	ConnWillClose(c *Conn)
@@ -25,15 +25,18 @@ func NewConn(conn *net.TCPConn, id uint64) *Conn {
 	return &Conn{
 		id: id,
 		conn: conn,
-		sendChan: make(chan *packet.Frame, 64),
-		stopChan: make(chan bool, 1),
+		sendLock: &sync.Mutex{},
 	}
 }
 
-func (c *Conn) recvLoop(h ConnHandler) {
+func (c *Conn) Run(h ConnHandler) {
 	defer func(){
 		c.Close(h)
 	}()
+
+	err := c.doHandshake(h)
+	if err != nil { return }
+
 	for {
 		f, err := packet.ReadFrame(c.conn)
 		if err != nil {
@@ -45,37 +48,16 @@ func (c *Conn) recvLoop(h ConnHandler) {
 	}
 }
 
-func (c *Conn) sendLoop(h ConnHandler) {
-	select {
-		case f := <- c.sendChan: {
-			f.Write(c.conn)
-		}
-		case _ = <- c.stopChan: {
-			c.doClose()
-			break
-		}
-	}
-}
-
-func (c *Conn) Run(h ConnHandler) {
-	err := c.doHandshake(h)
-	if err != nil {
-		c.Close(h)
-	}
-	go c.sendLoop(h)
-	c.recvLoop(h)
-}
-
-func (c *Conn) Send(f *packet.Frame) {
-	c.sendChan <- f
+func (c *Conn) Send(f *packet.Frame) error {
+	var err error
+	c.sendLock.Lock()
+	err = f.Write(c.conn)
+	c.sendLock.Unlock()
+	return err
 }
 
 func (c *Conn) Close(h ConnHandler) {
 	h.ConnWillClose(c)
-	c.stopChan <- true
-}
-
-func (c *Conn) doClose() {
 	c.conn.Close()
 }
 
@@ -89,6 +71,16 @@ func (c *Conn) doHandshake(h ConnHandler) error {
 
 	p, ok := m.(*packet.PacketHandshake)
 	if !ok { return errors.New("Not a Handshake Packet") }
+
+	r, err := packet.NewFrameWithPacket(&packet.PacketReady{
+		Mode: p.Mode,
+		NodeId: h.GetNodeId(),
+		ClientId: c.id,
+	})
+	if err != nil { return err }
+
+	err = c.Send(r)
+	if err != nil { return err }
 
 	c.isCallee = p.Mode == packet.ClientMode_CALLEE
 	c.provides = p.Provides
