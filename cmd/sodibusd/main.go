@@ -1,8 +1,9 @@
 package main
 
-import "fmt"
-import _ "github.com/sodibus/sodibus"
+import "github.com/sodibus/sodibus"
 
 func main() {
-	fmt.Println("hello world!")
+	s := sodibus.NewServer("0.0.0.0:7788")
+	err := s.Run()
+	println("Run Error: ", err)
 }
