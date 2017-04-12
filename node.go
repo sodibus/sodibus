@@ -6,6 +6,7 @@ import "errors"
 import "math/rand"
 import "github.com/sodibus/packet"
 import "github.com/sodibus/sodibus/conn_mgr"
+import "github.com/sodibus/sodibus/callee_mgr"
 
 // locate a Callee across mutiple nodes
 
@@ -16,6 +17,7 @@ type Node struct {
 	listener *net.TCPListener
 	// connections
 	connMgr *conn_mgr.ConnMgr
+	calleeMgr *callee_mgr.Manager
 }
 
 func NewNode(addr string) *Node {
@@ -23,6 +25,7 @@ func NewNode(addr string) *Node {
 		id: rand.Uint64(),
 		addr: addr,
 		connMgr: conn_mgr.New(),
+		calleeMgr: callee_mgr.New(),
 	}
 }
 

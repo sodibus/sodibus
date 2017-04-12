@@ -3,6 +3,7 @@ package sodibus
 import "log"
 import "github.com/sodibus/packet"
 import "github.com/sodibus/sodibus/conn"
+import "github.com/sodibus/sodibus/callee_mgr"
 
 // Prepare a PacketReady
 func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.PacketReady, error) {
@@ -19,6 +20,10 @@ func (n *Node) ConnDidStart(c *conn.Conn) {
 	log.Println("New Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", provides =", c.GetProvides())
 	// put to internal registry
 	n.connMgr.Put(c)
+	// put to callee manager
+	if c.IsCallee() {
+		n.calleeMgr.BatchPut(callee_mgr.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+	}
 }
 
 // Handle Frame
@@ -29,11 +34,17 @@ func (n *Node) ConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	m, err := f.Parse()
 	if err != nil { return }
+
 	switch m.(type) {
 		case (*packet.PacketCallerSend): {
 			p := m.(*packet.PacketCallerSend)
 			log.Println("Invoke from", c.GetId(), ", callee_name =", p.Invocation.CalleeName , ", method =", p.Invocation.MethodName, ", arguments =", p.Invocation.Arguments)
-			callee := n.connMgr.ResolveCallee(p.Invocation.CalleeName)
+			var callee *conn.Conn
+			calleeId := n.calleeMgr.Resolve(p.Invocation.CalleeName)
+			if calleeId != nil {
+				callee 	 = n.connMgr.Get(calleeId.ClientId)
+				log.Println("Resolved CalleeId", calleeId.ClientId)
+			}
 			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")
 				r, _ := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
@@ -65,5 +76,9 @@ func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 	log.Println("Lost Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", err =", err)
 	// remove from internal registry
 	n.connMgr.Del(c.GetId())
+	// remove from callee manager
+	if c.IsCallee() {
+		n.calleeMgr.BatchDel(callee_mgr.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+	}
 }
 
