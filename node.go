@@ -7,6 +7,7 @@ import "errors"
 import "math/rand"
 import "github.com/Unknwon/com"
 import "github.com/sodibus/packet"
+import "github.com/sodibus/sodibus/conn"
 
 // locate a Callee across mutiple nodes
 
@@ -22,7 +23,7 @@ type Node struct {
 	listener *net.TCPListener
 	// connections
 	lastConnId uint64
-	conns map[uint64]*Conn
+	conns map[uint64]*conn.Conn
 	connsLock *sync.RWMutex
 }
 
@@ -30,7 +31,7 @@ func NewNode(addr string) *Node {
 	return &Node {
 		id: rand.Uint64(),
 		addr: addr,
-		conns: make(map[uint64]*Conn),
+		conns: make(map[uint64]*conn.Conn),
 		connsLock: &sync.RWMutex{},
 	}
 }
@@ -58,12 +59,12 @@ func (n *Node) Run() error {
 	// accepting
 	for {
 		// accept
-		conn, err := n.listener.AcceptTCP()
+		cn, err := n.listener.AcceptTCP()
 		if err == nil {
 			// create client, auto atomical id
-			c := NewConn(conn, n.NewConnId())
+			c := conn.New(cn, n.NewConnId(), n)
 			// start Conn
-			go c.Run(n)
+			go c.Run()
 		} else {
 			log.Fatal("Failed to accept", err)
 			return err
@@ -78,10 +79,10 @@ func (n *Node) ResolveCallee(name string) *CalleeId {
 	// find a usable client and send back
 	n.connsLock.RLock()
 	for _, v := range n.conns {
-		if v.isCallee && com.IsSliceContainsStr(v.provides, name) {
+		if v.IsCallee() && com.IsSliceContainsStr(v.GetProvides(), name) {
 			calleeId = &CalleeId{
 				NodeId: n.id,
-				ClientId: v.id,
+				ClientId: v.GetId(),
 			}
 			break
 		}
@@ -114,59 +115,3 @@ func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
 }
 
 // ConnHandler
-
-func (n *Node) ConnDidStart(c *Conn) {
-	log.Println("New Conn: id =", c.id, ", callee =", c.isCallee, ", provides =", c.provides)
-	// put to internal registry
-	n.connsLock.Lock()
-	n.conns[c.id] = c
-	n.connsLock.Unlock()
-}
-
-// will run in goroutine
-func (n *Node) ConnDidReceiveFrame(c *Conn, f *packet.Frame) {
-	m, err := f.Parse()
-	if err != nil { return }
-	switch m.(type) {
-		case (*packet.PacketCallerSend): {
-			p := m.(*packet.PacketCallerSend)
-			log.Println("Invoke from", c.id, ", callee_name =", p.Invocation.CalleeName , ", method =", p.Invocation.MethodName, ", arguments =", p.Invocation.Arguments)
-			calleeId := n.ResolveCallee(p.Invocation.CalleeName)
-			if calleeId == nil {
-				log.Println("Callee named", p.Invocation.CalleeName, "not found")
-				r, _ := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
-					Id: p.Id,
-					Code: packet.ErrorCode_NO_CALLEE,
-					Result: "",
-				})
-				c.Send(r)
-			} else {
-				r := &packet.PacketCalleeRecv{
-					Id: &packet.InvocationId{
-						Id: p.Id,
-						ClientId: c.id,
-						NodeId: n.id,
-					},
-					Invocation: p.Invocation,
-				}
-				n.TransportInvocation(calleeId, r)
-			}
-		}
-		case (*packet.PacketCalleeSend): {
-			p := m.(*packet.PacketCalleeSend)
-			n.TransportInvocationResult(p)
-		}
-	}
-}
-
-func (n *Node) ConnWillClose(c *Conn) {
-	log.Println("Lost Conn: id =", c.id, ", callee =", c.isCallee)
-	// remove from internal registry
-	n.connsLock.Lock()
-	delete(n.conns, c.id)
-	n.connsLock.Unlock()
-}
-
-func (n *Node) GetNodeId() uint64 {
-	return n.id
-}
