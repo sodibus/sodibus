@@ -1,16 +1,25 @@
-package callee_mgr
+package callee
 
 import "sync"
 import "log"
 
+// Group
+//
+// Group of Callees share a same Callee Name
 type Group struct {
+	// name
 	name string
 
+	// array of CalleeIds
 	ids []CalleeId
+	// map of CalleeIds
 	idsMap map[CalleeId]bool
+	// RWMutex to protect mutation
 	idsLock *sync.RWMutex
 
+	// cursor of round-robin balacing
 	cursor int
+	// lock of cursor
 	cursorLock *sync.Mutex
 }
 
@@ -24,6 +33,7 @@ func NewGroup(name string) *Group {
 	}
 }
 
+// Add a CalleeId to the group, if not added before
 func (g *Group) Put(id CalleeId) {
 	// lock ids and cursor
 	g.idsLock.Lock()
@@ -43,6 +53,9 @@ func (g *Group) Put(id CalleeId) {
 	g.ids = append(g.ids, id)
 }
 
+// Delete a CalleeId from the group, if added before
+//
+// this will also adjust round-robin cursor automatically
 func (g *Group) Del(id CalleeId) {
 	// lock ids and cursor
 	g.idsLock.Lock()
@@ -74,6 +87,9 @@ func (g *Group) Del(id CalleeId) {
 	}
 }
 
+// Take a CalleeId by Round-Robin balancing
+//
+// returns nil if nothing found
 func (g *Group) Take() *CalleeId {
 	log.Println("Take", g.name, "among", len(g.ids), "callees")
 	// lock ids and cursor

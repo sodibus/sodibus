@@ -5,32 +5,34 @@ import "log"
 import "errors"
 import "math/rand"
 import "github.com/sodibus/packet"
-import "github.com/sodibus/sodibus/conn_mgr"
-import "github.com/sodibus/sodibus/callee_mgr"
+import "github.com/sodibus/sodibus/conn"
+import "github.com/sodibus/sodibus/callee"
 
-// locate a Callee across mutiple nodes
-
+// Node is a SODIBus server
+//
+// Node should have a unique Id, it holds mutiple Callee/Callers
 type Node struct {
 	// node information
 	id uint64
 	addr string
 	listener *net.TCPListener
 	// connections
-	connMgr *conn_mgr.ConnMgr
-	calleeMgr *callee_mgr.Manager
+	connMgr *conn.Manager
+	calleeMgr *callee.Manager
 }
 
 func NewNode(addr string) *Node {
 	return &Node {
 		id: rand.Uint64(),
 		addr: addr,
-		connMgr: conn_mgr.New(),
-		calleeMgr: callee_mgr.New(),
+		connMgr: conn.NewManager(),
+		calleeMgr: callee.NewManager(),
 	}
 }
 
-// Loops
-
+// Main loop for Node
+//
+// should run in a goroutine or main routine
 func (n *Node) Run() error {
 	// resolve TCP address to bind
 	tcpAddr, err := net.ResolveTCPAddr("tcp", n.addr)
@@ -59,8 +61,8 @@ func (n *Node) Run() error {
 	}
 }
 
-// Resolving
-
+// Transport a CalleeSend packet to it's orignal Caller
+//TODO: use cluster transport system
 func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
 	conn := n.connMgr.Get(p.Id.ClientId)
 	if conn == nil { return errors.New("no callee found") }

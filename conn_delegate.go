@@ -3,7 +3,7 @@ package sodibus
 import "log"
 import "github.com/sodibus/packet"
 import "github.com/sodibus/sodibus/conn"
-import "github.com/sodibus/sodibus/callee_mgr"
+import "github.com/sodibus/sodibus/callee"
 
 // Prepare a PacketReady
 func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.PacketReady, error) {
@@ -22,7 +22,7 @@ func (n *Node) ConnDidStart(c *conn.Conn) {
 	n.connMgr.Put(c)
 	// put to callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchPut(callee_mgr.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchPut(callee.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
 	}
 }
 
@@ -72,13 +72,16 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	}
 }
 
+// Handle Conn close
+//
+// remove Conn from connMgr and calleeMgr if it's a Callee
 func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 	log.Println("Lost Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", err =", err)
 	// remove from internal registry
 	n.connMgr.Del(c.GetId())
 	// remove from callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchDel(callee_mgr.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchDel(callee.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
 	}
 }
 
