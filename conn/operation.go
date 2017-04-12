@@ -35,11 +35,9 @@ func (c *Conn) Run() {
 //
 // uses a Mutex internally
 func (c *Conn) Send(f *packet.Frame) error {
-	var err error
 	c.sendLock.Lock()
-	err = f.Write(c.conn)
-	c.sendLock.Unlock()
-	return err
+	defer c.sendLock.Unlock()
+	return f.Write(c.conn)
 }
 
 // Close a Conn
