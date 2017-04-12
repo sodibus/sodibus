@@ -18,9 +18,7 @@ func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.P
 func (n *Node) ConnDidStart(c *conn.Conn) {
 	log.Println("New Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", provides =", c.GetProvides())
 	// put to internal registry
-	n.connsLock.Lock()
-	n.conns[c.GetId()] = c
-	n.connsLock.Unlock()
+	n.connMgr.Put(c)
 }
 
 // Handle Frame
@@ -35,8 +33,8 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 		case (*packet.PacketCallerSend): {
 			p := m.(*packet.PacketCallerSend)
 			log.Println("Invoke from", c.GetId(), ", callee_name =", p.Invocation.CalleeName , ", method =", p.Invocation.MethodName, ", arguments =", p.Invocation.Arguments)
-			calleeId := n.ResolveCallee(p.Invocation.CalleeName)
-			if calleeId == nil {
+			callee := n.connMgr.ResolveCallee(p.Invocation.CalleeName)
+			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")
 				r, _ := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
 					Id: p.Id,
@@ -45,15 +43,15 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 				})
 				c.Send(r)
 			} else {
-				r := &packet.PacketCalleeRecv{
+				f, _ := packet.NewFrameWithPacket(&packet.PacketCalleeRecv{
 					Id: &packet.InvocationId{
 						Id: p.Id,
 						ClientId: c.GetId(),
 						NodeId: n.id,
 					},
 					Invocation: p.Invocation,
-				}
-				n.TransportInvocation(calleeId, r)
+				})
+				callee.Send(f)
 			}
 		}
 		case (*packet.PacketCalleeSend): {
@@ -66,8 +64,6 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 	log.Println("Lost Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", err =", err)
 	// remove from internal registry
-	n.connsLock.Lock()
-	delete(n.conns, c.GetId())
-	n.connsLock.Unlock()
+	n.connMgr.Del(c.GetId())
 }
 

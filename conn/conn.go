@@ -20,13 +20,19 @@ type Conn struct {
 }
 
 // Create a New Conn
-func New(conn *net.TCPConn, id uint64, delegate Delegate) *Conn {
+func New(conn *net.TCPConn, id uint64) *Conn {
 	return &Conn{
 		id: id,
 		conn: conn,
-		delegate: delegate,
 		sendLock: &sync.Mutex{},
 	}
+}
+
+// Set the delegate of a Conn
+//
+// delegate muste be set before #Run()
+func (c *Conn) SetDelegate(delegate Delegate) {
+	c.delegate = delegate
 }
 
 // Get the ID of a Conn
