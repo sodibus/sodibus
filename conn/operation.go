@@ -21,7 +21,8 @@ func (c *Conn) Run() {
 
 	// read loop
 	for {
-		f, err := packet.ReadFrame(c.conn)
+		var f *packet.Frame
+		f, err = packet.ReadFrame(c.conn)
 		if err != nil {
 			_, ok := err.(packet.UnsynchronizedError)
 			if ok { continue } else { break } // ignore UnsynchronizedError
