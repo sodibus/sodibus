@@ -38,12 +38,10 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	switch m.(type) {
 		case (*packet.PacketCallerSend): {
 			p := m.(*packet.PacketCallerSend)
-			log.Println("Invoke from", c.GetId(), ", callee_name =", p.Invocation.CalleeName , ", method =", p.Invocation.MethodName, ", arguments =", p.Invocation.Arguments)
 			var callee *conn.Conn
 			calleeId := n.calleeMgr.Resolve(p.Invocation.CalleeName)
 			if calleeId != nil {
 				callee 	 = n.connMgr.Get(calleeId.ClientId)
-				log.Println("Resolved CalleeId", calleeId.ClientId)
 			}
 			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")

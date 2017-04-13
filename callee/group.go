@@ -1,7 +1,6 @@
 package callee
 
 import "sync"
-import "log"
 
 // Group
 //
@@ -91,7 +90,6 @@ func (g *Group) Del(id CalleeId) {
 //
 // returns nil if nothing found
 func (g *Group) Take() *CalleeId {
-	log.Println("Take", g.name, "among", len(g.ids), "callees")
 	// lock ids and cursor
 	g.idsLock.RLock()
 	g.cursorLock.Lock()
