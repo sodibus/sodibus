@@ -8,14 +8,14 @@ import "sync/atomic"
 //
 // Manager manages mutiple Conn, assigns unique ids and find Conn by id
 type Manager struct {
-	seqId uint64
-	conns map[uint64]*Conn
+	seqId     uint64
+	conns     map[uint64]*Conn
 	connsLock *sync.RWMutex
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		conns: make(map[uint64]*Conn, 128),
+		conns:     make(map[uint64]*Conn, 128),
 		connsLock: &sync.RWMutex{},
 	}
 }

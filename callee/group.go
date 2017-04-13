@@ -24,10 +24,10 @@ type Group struct {
 
 func NewGroup(name string) *Group {
 	return &Group{
-		name: name,
-		ids: make([]CalleeId, 0),
-		idsMap: make(map[CalleeId]bool),
-		idsLock: &sync.RWMutex{},
+		name:       name,
+		ids:        make([]CalleeId, 0),
+		idsMap:     make(map[CalleeId]bool),
+		idsLock:    &sync.RWMutex{},
 		cursorLock: &sync.Mutex{},
 	}
 }
@@ -43,7 +43,9 @@ func (g *Group) Put(id CalleeId) {
 	// check if already exists
 	found := g.idsMap[id]
 
-	if found { return }
+	if found {
+		return
+	}
 
 	// add to map
 	g.idsMap[id] = true
@@ -72,7 +74,9 @@ func (g *Group) Del(id CalleeId) {
 			idx = i
 		}
 	}
-	if idx < 0 { return }
+	if idx < 0 {
+		return
+	}
 
 	// remove from map
 	delete(g.idsMap, id)
@@ -106,7 +110,9 @@ func (g *Group) Take() *CalleeId {
 	}
 
 	// reset cursor if exceeded
-	if g.cursor >= l { g.cursor = 0 }
+	if g.cursor >= l {
+		g.cursor = 0
+	}
 
 	// get
 	c := &g.ids[g.cursor]

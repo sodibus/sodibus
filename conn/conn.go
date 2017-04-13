@@ -22,8 +22,8 @@ type Conn struct {
 // Create a New Conn
 func New(conn *net.TCPConn, id uint64) *Conn {
 	return &Conn{
-		id: id,
-		conn: conn,
+		id:       id,
+		conn:     conn,
 		sendLock: &sync.Mutex{},
 	}
 }

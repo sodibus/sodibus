@@ -8,8 +8,8 @@ import "github.com/sodibus/sodibus/callee"
 // Prepare a PacketReady
 func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.PacketReady, error) {
 	p := &packet.PacketReady{
-		Mode: f.Mode,
-		NodeId: n.id,
+		Mode:     f.Mode,
+		NodeId:   n.id,
 		ClientId: c.GetId(),
 	}
 	return p, nil
@@ -22,7 +22,7 @@ func (n *Node) ConnDidStart(c *conn.Conn) {
 	n.connMgr.Put(c)
 	// put to callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchPut(callee.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchPut(callee.CalleeId{NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
 	}
 }
 
@@ -33,37 +33,41 @@ func (n *Node) ConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 
 func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	m, err := f.Parse()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	switch m.(type) {
-		case (*packet.PacketCallerSend): {
+	case (*packet.PacketCallerSend):
+		{
 			p := m.(*packet.PacketCallerSend)
 			var callee *conn.Conn
 			calleeId := n.calleeMgr.Resolve(p.Invocation.CalleeName)
 			if calleeId != nil {
-				callee 	 = n.connMgr.Get(calleeId.ClientId)
+				callee = n.connMgr.Get(calleeId.ClientId)
 			}
 			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")
 				r, _ := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
-					Id: p.Id,
-					Code: packet.ErrorCode_NO_CALLEE,
+					Id:     p.Id,
+					Code:   packet.ErrorCode_NO_CALLEE,
 					Result: "",
 				})
 				c.Send(r)
 			} else {
 				f, _ := packet.NewFrameWithPacket(&packet.PacketCalleeRecv{
 					Id: &packet.InvocationId{
-						Id: p.Id,
+						Id:       p.Id,
 						ClientId: c.GetId(),
-						NodeId: n.id,
+						NodeId:   n.id,
 					},
 					Invocation: p.Invocation,
 				})
 				callee.Send(f)
 			}
 		}
-		case (*packet.PacketCalleeSend): {
+	case (*packet.PacketCalleeSend):
+		{
 			p := m.(*packet.PacketCalleeSend)
 			n.TransportInvocationResult(p)
 		}
@@ -79,6 +83,6 @@ func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 	n.connMgr.Del(c.GetId())
 	// remove from callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchDel(callee.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchDel(callee.CalleeId{NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
 	}
 }

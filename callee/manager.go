@@ -6,7 +6,7 @@ import "sync"
 //
 // composed by a NodeId and a ClientId (node-local id)
 type CalleeId struct {
-	NodeId uint64
+	NodeId   uint64
 	ClientId uint64
 }
 
@@ -22,7 +22,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		groups: make(map[string]*Group),
+		groups:     make(map[string]*Group),
 		groupsLock: &sync.RWMutex{},
 	}
 }

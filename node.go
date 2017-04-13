@@ -13,19 +13,19 @@ import "github.com/sodibus/sodibus/callee"
 // Node should have a unique Id, it holds mutiple Callee/Callers
 type Node struct {
 	// node information
-	id uint64
-	addr string
+	id       uint64
+	addr     string
 	listener *net.TCPListener
 	// connections
-	connMgr *conn.Manager
+	connMgr   *conn.Manager
 	calleeMgr *callee.Manager
 }
 
 func NewNode(addr string) *Node {
-	return &Node {
-		id: rand.Uint64(),
-		addr: addr,
-		connMgr: conn.NewManager(),
+	return &Node{
+		id:        rand.Uint64(),
+		addr:      addr,
+		connMgr:   conn.NewManager(),
 		calleeMgr: callee.NewManager(),
 	}
 }
@@ -36,11 +36,15 @@ func NewNode(addr string) *Node {
 func (n *Node) Run() error {
 	// resolve TCP address to bind
 	tcpAddr, err := net.ResolveTCPAddr("tcp", n.addr)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// create listener
 	n.listener, err = net.ListenTCP("tcp", tcpAddr)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	log.Println("SODIBus", n.id, "listening at", n.addr)
 
@@ -66,13 +70,17 @@ func (n *Node) Run() error {
 //TODO: use cluster transport system
 func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
 	conn := n.connMgr.Get(p.Id.ClientId)
-	if conn == nil { return errors.New("no callee found") }
+	if conn == nil {
+		return errors.New("no callee found")
+	}
 	f, err := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
-		Id: p.Id.Id,
-		Code: packet.ErrorCode_OK,
+		Id:     p.Id.Id,
+		Code:   packet.ErrorCode_OK,
 		Result: p.Result,
 	})
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	err = conn.Send(f)
 	return err
 }

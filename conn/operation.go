@@ -11,13 +11,15 @@ func (c *Conn) Run() {
 	var err error
 
 	// defer to close
-	defer func(){
+	defer func() {
 		c.Close(err)
 	}()
 
 	// execute handshake
 	err = c.doHandshake()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	// read loop
 	for {
@@ -25,7 +27,11 @@ func (c *Conn) Run() {
 		f, err = packet.ReadFrame(c.conn)
 		if err != nil {
 			_, ok := err.(packet.UnsynchronizedError)
-			if ok { continue } else { break } // ignore UnsynchronizedError
+			if ok {
+				continue
+			} else {
+				break
+			} // ignore UnsynchronizedError
 		} else {
 			c.delegate.ConnDidReceiveFrame(c, f)
 		}
@@ -55,25 +61,37 @@ func (c *Conn) Close(err error) {
 func (c *Conn) doHandshake() error {
 	// read a frame
 	f, err := packet.ReadFrame(c.conn)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// parse handshake packet
 	var m proto.Message
 	m, err = f.Parse()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	p, ok := m.(*packet.PacketHandshake)
-	if !ok { return errors.New("Not a Handshake Packet") }
+	if !ok {
+		return errors.New("Not a Handshake Packet")
+	}
 
 	// handshake with delegate
 	r, err := c.delegate.ConnHandshake(c, p)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	rf, err := packet.NewFrameWithPacket(r)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	err = c.Send(rf)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// update values
 	c.isCallee = p.Mode == packet.ClientMode_CALLEE
