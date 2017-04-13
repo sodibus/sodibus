@@ -68,4 +68,3 @@ func (m *Manager) BatchDel(id CalleeId, provides []string) {
 		m.Group(name).Del(id)
 	}
 }
-

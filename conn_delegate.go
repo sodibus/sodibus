@@ -84,4 +84,3 @@ func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 		n.calleeMgr.BatchDel(callee.CalleeId{ NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
 	}
 }
-

@@ -49,4 +49,3 @@ func (c *Conn) GetProvides() []string {
 func (c *Conn) IsCallee() bool {
 	return c.isCallee
 }
-

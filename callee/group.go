@@ -118,4 +118,3 @@ func (g *Group) Take() *CalleeId {
 
 	return c
 }
-

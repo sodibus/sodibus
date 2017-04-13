@@ -83,4 +83,3 @@ func (c *Conn) doHandshake() error {
 
 	return err
 }
-

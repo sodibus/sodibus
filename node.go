@@ -49,6 +49,7 @@ func (n *Node) Run() error {
 		// accept
 		cn, err := n.listener.AcceptTCP()
 		if err == nil {
+			cn.SetKeepAlive(true)
 			// create client, auto atomical id
 			c := n.connMgr.Wrap(cn)
 			c.SetDelegate(n)
@@ -75,4 +76,3 @@ func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
 	err = conn.Send(f)
 	return err
 }
-

@@ -46,4 +46,3 @@ func (cm *Manager) Get(id uint64) *Conn {
 	defer cm.connsLock.RUnlock()
 	return cm.conns[id]
 }
-
