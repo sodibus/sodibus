@@ -12,7 +12,7 @@ type Delegate interface {
 	ConnDidStart(c *Conn)
 
 	// notify connection did receive a frame
-	ConnDidReceiveFrame(c *Conn, f *packet.Frame)
+	ConnDidReceivePacket(c *Conn, f packet.Packet)
 
 	// notify connection closed, a optional associated error
 	ConnWillClose(c *Conn, err error)

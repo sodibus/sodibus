@@ -26,17 +26,12 @@ func (n *Node) ConnDidStart(c *conn.Conn) {
 	}
 }
 
-// ConnDidReceiveFrame handles frame
-func (n *Node) ConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
-	go n.doConnDidReceiveFrame(c, f)
+// ConnDidReceivePacket handles frame
+func (n *Node) ConnDidReceivePacket(c *conn.Conn, m packet.Packet) {
+	go n.doConnDidReceivePacket(c, m)
 }
 
-func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
-	m, err := f.Parse()
-	if err != nil {
-		return
-	}
-
+func (n *Node) doConnDidReceivePacket(c *conn.Conn, m packet.Packet) {
 	switch m.(type) {
 	case (*packet.PacketCallerSend):
 		{

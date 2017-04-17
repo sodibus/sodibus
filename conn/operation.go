@@ -22,17 +22,16 @@ func (c *Conn) Run() {
 
 	// read loop
 	for {
-		var f *packet.Frame
-		f, err = packet.ReadFrame(c.conn)
+		var m packet.Packet
+		m, err = packet.ReadAndParse(c.conn)
 		if err != nil {
 			_, ok := err.(packet.UnsynchronizedError)
-			if ok {
-				continue
-			} else {
+			// ignore UnsynchronizedError
+			if !ok {
 				break
-			} // ignore UnsynchronizedError
+			}
 		} else {
-			c.delegate.ConnDidReceiveFrame(c, f)
+			c.delegate.ConnDidReceivePacket(c, m)
 		}
 	}
 }
