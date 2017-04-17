@@ -5,28 +5,28 @@ import "github.com/sodibus/packet"
 import "github.com/sodibus/sodibus/conn"
 import "github.com/sodibus/sodibus/callee"
 
-// Prepare a PacketReady
+// ConnHandshake provides handshake logic
 func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.PacketReady, error) {
 	p := &packet.PacketReady{
 		Mode:     f.Mode,
-		NodeId:   n.id,
-		ClientId: c.GetId(),
+		NodeID:   n.id,
+		ClientId: c.GetID(),
 	}
 	return p, nil
 }
 
-// Add Conn to internal registry
+// ConnDidStart provides logic on Conn did successfully complete handshake
 func (n *Node) ConnDidStart(c *conn.Conn) {
-	log.Println("New Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", provides =", c.GetProvides())
+	log.Println("New Conn: id =", c.GetID(), ", callee =", c.IsCallee(), ", provides =", c.GetProvides())
 	// put to internal registry
 	n.connMgr.Put(c)
 	// put to callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchPut(callee.CalleeId{NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchPut(callee.FullID{NodeID: n.id, ClientId: c.GetID()}, c.GetProvides())
 	}
 }
 
-// Handle Frame
+// ConnDidReceiveFrame handles frame
 func (n *Node) ConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	go n.doConnDidReceiveFrame(c, f)
 }
@@ -42,9 +42,9 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 		{
 			p := m.(*packet.PacketCallerSend)
 			var callee *conn.Conn
-			calleeId := n.calleeMgr.Resolve(p.Invocation.CalleeName)
-			if calleeId != nil {
-				callee = n.connMgr.Get(calleeId.ClientId)
+			calleeID := n.calleeMgr.Resolve(p.Invocation.CalleeName)
+			if calleeID != nil {
+				callee = n.connMgr.Get(calleeID.ClientId)
 			}
 			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")
@@ -58,8 +58,8 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 				f, _ := packet.NewFrameWithPacket(&packet.PacketCalleeRecv{
 					Id: &packet.InvocationId{
 						Id:       p.Id,
-						ClientId: c.GetId(),
-						NodeId:   n.id,
+						ClientId: c.GetID(),
+						NodeID:   n.id,
 					},
 					Invocation: p.Invocation,
 				})
@@ -74,15 +74,13 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 	}
 }
 
-// Handle Conn close
-//
-// remove Conn from connMgr and calleeMgr if it's a Callee
+// ConnWillClose removes Conn from connMgr and from calleeMgr if it's a Callee
 func (n *Node) ConnWillClose(c *conn.Conn, err error) {
-	log.Println("Lost Conn: id =", c.GetId(), ", callee =", c.IsCallee(), ", err =", err)
+	log.Println("Lost Conn: id =", c.GetID(), ", callee =", c.IsCallee(), ", err =", err)
 	// remove from internal registry
-	n.connMgr.Del(c.GetId())
+	n.connMgr.Del(c.GetID())
 	// remove from callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchDel(callee.CalleeId{NodeId: n.id, ClientId: c.GetId()}, c.GetProvides())
+		n.calleeMgr.BatchDel(callee.FullID{NodeID: n.id, ClientId: c.GetID()}, c.GetProvides())
 	}
 }

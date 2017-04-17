@@ -2,10 +2,9 @@ package conn
 
 import "errors"
 import "github.com/sodibus/packet"
-import "github.com/golang/protobuf/proto"
 
+// Run ...
 // Recv loop
-//
 // should run in a seperated goroutine
 func (c *Conn) Run() {
 	var err error
@@ -59,15 +58,8 @@ func (c *Conn) Close(err error) {
 //
 // execute handshake process, using delegate internally
 func (c *Conn) doHandshake() error {
-	// read a frame
-	f, err := packet.ReadFrame(c.conn)
-	if err != nil {
-		return err
-	}
-
-	// parse handshake packet
-	var m proto.Message
-	m, err = f.Parse()
+	// read and parse handshake packet
+	m, err := packet.ReadAndParse(c.conn)
 	if err != nil {
 		return err
 	}

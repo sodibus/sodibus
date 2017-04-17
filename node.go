@@ -1,12 +1,16 @@
 package sodibus
 
-import "net"
-import "log"
-import "errors"
+import (
+	"fmt"
+	"log"
+	"net"
+
+	"github.com/sodibus/packet"
+	"github.com/sodibus/sodibus/callee"
+)
 import "math/rand"
-import "github.com/sodibus/packet"
+
 import "github.com/sodibus/sodibus/conn"
-import "github.com/sodibus/sodibus/callee"
 
 // Node is a SODIBus server
 //
@@ -21,6 +25,7 @@ type Node struct {
 	calleeMgr *callee.Manager
 }
 
+// NewNode create a new Node
 func NewNode(addr string) *Node {
 	return &Node{
 		id:        rand.Uint64(),
@@ -30,7 +35,7 @@ func NewNode(addr string) *Node {
 	}
 }
 
-// Main loop for Node
+// Run is the main loop of Node
 //
 // should run in a goroutine or main routine
 func (n *Node) Run() error {
@@ -66,12 +71,12 @@ func (n *Node) Run() error {
 	}
 }
 
-// Transport a CalleeSend packet to it's orignal Caller
+// TransportInvocationResult transports a CalleeSend packet to it's orignal Caller
 //TODO: use cluster transport system
 func (n *Node) TransportInvocationResult(p *packet.PacketCalleeSend) error {
 	conn := n.connMgr.Get(p.Id.ClientId)
 	if conn == nil {
-		return errors.New("no callee found")
+		return fmt.Errorf("Callee Not Found with ID %v", p.Id)
 	}
 	f, err := packet.NewFrameWithPacket(&packet.PacketCallerRecv{
 		Id:     p.Id.Id,

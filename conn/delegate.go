@@ -2,9 +2,7 @@ package conn
 
 import "github.com/sodibus/packet"
 
-// Connection Delegate
-//
-// SODIBus Connection uses delegate mechanism to handle logic
+// Delegate delegates some Conn logic to others
 type Delegate interface {
 
 	// handle handshake process

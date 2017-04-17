@@ -19,7 +19,7 @@ type Conn struct {
 	sendLock *sync.Mutex
 }
 
-// Create a New Conn
+// New create a New Conn with underlying TCP connection and a unique id
 func New(conn *net.TCPConn, id uint64) *Conn {
 	return &Conn{
 		id:       id,
@@ -28,24 +28,24 @@ func New(conn *net.TCPConn, id uint64) *Conn {
 	}
 }
 
-// Set the delegate of a Conn
+// SetDelegate sets the delegate of a Conn
 //
 // delegate muste be set before #Run()
 func (c *Conn) SetDelegate(delegate Delegate) {
 	c.delegate = delegate
 }
 
-// Get the ID of a Conn
-func (c *Conn) GetId() uint64 {
+// GetID gets the ID of a Conn
+func (c *Conn) GetID() uint64 {
 	return c.id
 }
 
-// Get Callee Provides
+// GetProvides gets Callee Provides
 func (c *Conn) GetProvides() []string {
 	return c.provides
 }
 
-// If this Conn is a Callee
+// IsCallee returns if this Conn is a Callee
 func (c *Conn) IsCallee() bool {
 	return c.isCallee
 }
