@@ -9,7 +9,7 @@ import "github.com/sodibus/sodibus/callee"
 func (n *Node) ConnHandshake(c *conn.Conn, f *packet.PacketHandshake) (*packet.PacketReady, error) {
 	p := &packet.PacketReady{
 		Mode:     f.Mode,
-		NodeID:   n.id,
+		NodeId:   n.id,
 		ClientId: c.GetID(),
 	}
 	return p, nil
@@ -22,7 +22,7 @@ func (n *Node) ConnDidStart(c *conn.Conn) {
 	n.connMgr.Put(c)
 	// put to callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchPut(callee.FullID{NodeID: n.id, ClientId: c.GetID()}, c.GetProvides())
+		n.calleeMgr.BatchPut(callee.FullID{NodeID: n.id, ClientID: c.GetID()}, c.GetProvides())
 	}
 }
 
@@ -44,7 +44,7 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 			var callee *conn.Conn
 			calleeID := n.calleeMgr.Resolve(p.Invocation.CalleeName)
 			if calleeID != nil {
-				callee = n.connMgr.Get(calleeID.ClientId)
+				callee = n.connMgr.Get(calleeID.ClientID)
 			}
 			if callee == nil {
 				log.Println("Callee named", p.Invocation.CalleeName, "not found")
@@ -59,7 +59,7 @@ func (n *Node) doConnDidReceiveFrame(c *conn.Conn, f *packet.Frame) {
 					Id: &packet.InvocationId{
 						Id:       p.Id,
 						ClientId: c.GetID(),
-						NodeID:   n.id,
+						NodeId:   n.id,
 					},
 					Invocation: p.Invocation,
 				})
@@ -81,6 +81,6 @@ func (n *Node) ConnWillClose(c *conn.Conn, err error) {
 	n.connMgr.Del(c.GetID())
 	// remove from callee manager
 	if c.IsCallee() {
-		n.calleeMgr.BatchDel(callee.FullID{NodeID: n.id, ClientId: c.GetID()}, c.GetProvides())
+		n.calleeMgr.BatchDel(callee.FullID{NodeID: n.id, ClientID: c.GetID()}, c.GetProvides())
 	}
 }
